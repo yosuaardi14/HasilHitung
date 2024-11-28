@@ -112,6 +112,7 @@ class CalculatorView extends StatelessWidget {
               decoration: const InputDecoration(
                 labelText: "Nama Bank",
               ),
+              cursorColor: Colors.pink,
             ),
             Row(
               children: [
