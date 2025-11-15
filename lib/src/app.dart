@@ -8,6 +8,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return SafeArea(child: child ?? const SizedBox());
+      },
       theme: ThemeData(
         useMaterial3: false,
         appBarTheme: const AppBarTheme(backgroundColor: Colors.pink),

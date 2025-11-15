@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/src/calculator/calculator_controller.dart';
+import 'package:flutter_application_1/src/calculator/calculator_model.dart';
 import 'package:flutter_application_1/src/calculator/currency_formatter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
@@ -26,7 +27,7 @@ class CalculatorView extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(onPressed: state.reset, icon: const Icon(Icons.refresh))
+          IconButton(onPressed: state.reset, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: Container(
@@ -38,24 +39,20 @@ class CalculatorView extends StatelessWidget {
               controller: state.diskonController,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
-                CurrencyInputFormatter()
+                CurrencyInputFormatter(),
               ],
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Diskon",
-              ),
+              decoration: const InputDecoration(labelText: "Diskon"),
               cursorColor: Colors.pink,
             ),
             TextField(
               controller: state.biayaController,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
-                CurrencyInputFormatter()
+                CurrencyInputFormatter(),
               ],
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Biaya Layanan",
-              ),
+              decoration: const InputDecoration(labelText: "Biaya Layanan"),
               cursorColor: Colors.pink,
             ),
             // TextField(
@@ -68,6 +65,17 @@ class CalculatorView extends StatelessWidget {
             //     labelText: "No Rekening",
             //   ),
             // ),
+            DropdownButtonFormField(
+              decoration: InputDecoration(
+                label: Text("Tipe Diskon dan Biaya Layanan"),
+              ),
+              initialValue: "Berdasarkan Pesanan",
+              items: [
+                "Berdasarkan Pesanan",
+                "Berdasarkan Peserta",
+              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              onChanged: state.onChangeTipeDiskonBiayaLayanan,
+            ),
             TypeAheadField<String>(
               focusNode: state.focusNode,
               controller: state.rekeningController,
@@ -90,12 +98,8 @@ class CalculatorView extends StatelessWidget {
                   focusNode: focusNode,
                   controller: controller,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: "No Rekening",
-                  ),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(labelText: "No Rekening"),
                   cursorColor: Colors.pink,
                   onTap: () {
                     state.suggestionsController.refresh();
@@ -109,9 +113,7 @@ class CalculatorView extends StatelessWidget {
             TextField(
               controller: state.bankController,
               inputFormatters: [UpperInputFormatter()],
-              decoration: const InputDecoration(
-                labelText: "Nama Bank",
-              ),
+              decoration: const InputDecoration(labelText: "Nama Bank"),
               cursorColor: Colors.pink,
             ),
             Row(
@@ -125,25 +127,26 @@ class CalculatorView extends StatelessWidget {
                 const Text("Simpan No. Rekening"),
               ],
             ),
-            ...List.generate(
-              state.jumlahPesertaList.length,
-              (index) {
-                return textField(
-                  state.jumlahPesertaList[index],
-                  state.hargaList[index],
-                  state.deskripsiList[index],
-                  index,
-                );
-              },
-            ),
+            ...List.generate(state.pesertaCalculator.length, (index) {
+              return textFieldPeserta(state.pesertaCalculator[index], index);
+            }),
+            // ...List.generate(state.jumlahPesananList.length, (index) {
+            //   return textFieldPesanan(
+            //     state.jumlahPesananList[index],
+            //     state.hargaList[index],
+            //     state.deskripsiList[index],
+            //     index,
+            //   );
+            // }),
             const SizedBox(height: 10),
             Container(
+              height: 35,
               constraints: const BoxConstraints(maxWidth: 300),
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.add),
-                onPressed: state.add,
-                label: const Text(
-                  "Tambahkan Peserta",
+                onPressed: state.addPeserta,
+                label: Text(
+                  "Tambahkan ${state.tipeDiskonBiayaLayanan == "Berdasarkan Peserta" ? "Peserta" : "Pesanan"}",
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -160,7 +163,9 @@ class CalculatorView extends StatelessWidget {
                 child: const Text(
                   "🖨 Hitung",
                   style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -171,200 +176,526 @@ class CalculatorView extends StatelessWidget {
                 child: Container(
                   color: Colors.white,
                   child: Column(
-                    children: [
-                      Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(1.5),
-                            1: FlexColumnWidth(2),
-                            2: FlexColumnWidth(2),
-                            3: FlexColumnWidth(2),
-                          },
-                          border: TableBorder.all(),
-                          defaultVerticalAlignment:
-                              TableCellVerticalAlignment.bottom,
-                          children: const [
-                            TableRow(
-                              decoration: BoxDecoration(color: Colors.pink),
+                    children:
+                        state.tipeDiskonBiayaLayanan == "Berdasarkan Pesanan"
+                        ? [
+                            Table(
+                              columnWidths: const {
+                                0: FlexColumnWidth(1.5),
+                                1: FlexColumnWidth(2),
+                                2: FlexColumnWidth(2),
+                                3: FlexColumnWidth(2),
+                              },
+                              border: TableBorder.all(),
+                              defaultVerticalAlignment:
+                                  TableCellVerticalAlignment.bottom,
+                              children: const [
+                                TableRow(
+                                  decoration: BoxDecoration(color: Colors.pink),
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Jumlah Peserta",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Harga\n(per pesanan)",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Harga\n+\nLayanan\n(per pesanan)",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Harga setelah Diskon\n(per pesanan)",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Table(
+                              columnWidths: const {
+                                0: FlexColumnWidth(1),
+                                1: FlexColumnWidth(0.5),
+                                2: FlexColumnWidth(2),
+                                3: FlexColumnWidth(2),
+                                4: FlexColumnWidth(2),
+                              },
+                              border: TableBorder.all(),
                               children: [
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Jumlah Peserta",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.white),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Harga\n(per orang)",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.white),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Harga\n+\nLayanan\n(per orang)",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.white),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "Harga setelah Diskon\n(per orang)",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.white),
+                                ...state.hasil.map(
+                                  (e) => TableRow(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "${e["deskripsi"]}",
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          "${e["jumlahPesanan"]}",
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          state.rupiahFormat(e["harga"]),
+                                          textAlign: TextAlign.right,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          state.rupiahFormat(
+                                            e["hargaBiayaLayanan"],
+                                          ),
+                                          textAlign: TextAlign.right,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Text(
+                                          state.rupiahFormat(
+                                            e["hargaSetelahDiskon"],
+                                          ),
+                                          textAlign: TextAlign.right,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ]),
-                      Table(
-                        columnWidths: const {
-                          0: FlexColumnWidth(1),
-                          1: FlexColumnWidth(0.5),
-                          2: FlexColumnWidth(2),
-                          3: FlexColumnWidth(2),
-                          4: FlexColumnWidth(2),
-                        },
-                        border: TableBorder.all(),
-                        children: [
-                          ...state.hasil.map(
-                            (e) => TableRow(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "${e["deskripsi"]}",
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "${e["jumlahPeserta"]}",
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    state.rupiahFormat(e["harga"]),
-                                    textAlign: TextAlign.right,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    state.rupiahFormat(e["hargaBiayaLayanan"]),
-                                    textAlign: TextAlign.right,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    state.rupiahFormat(e["hargaSetelahDiskon"]),
-                                    textAlign: TextAlign.right,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
+                            Table(
+                              border: TableBorder.all(),
+                              children: const [
+                                TableRow(
+                                  decoration: BoxDecoration(color: Colors.pink),
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "TOTAL",
+                                        textAlign: TextAlign.left,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      Table(
-                        border: TableBorder.all(),
-                        children: const [
-                          TableRow(
-                            decoration: BoxDecoration(color: Colors.pink),
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Text(
-                                  "TOTAL",
-                                  textAlign: TextAlign.left,
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white),
+                            Table(
+                              columnWidths: const {
+                                0: FlexColumnWidth(1.5),
+                                1: FlexColumnWidth(2),
+                                2: FlexColumnWidth(2),
+                                3: FlexColumnWidth(2),
+                              },
+                              border: TableBorder.all(),
+                              children: [
+                                TableRow(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "${state.totalPeserta}",
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        state.rupiahFormat(state.totalHarga),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        state.rupiahFormat(
+                                          state.totalHargaBiayaLayanan,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        state.rupiahFormat(
+                                          state.totalHargaDiskon,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              )
-                            ],
-                          ),
-                        ],
-                      ),
-                      Table(
-                        columnWidths: const {
-                          0: FlexColumnWidth(1.5),
-                          1: FlexColumnWidth(2),
-                          2: FlexColumnWidth(2),
-                          3: FlexColumnWidth(2),
-                        },
-                        border: TableBorder.all(),
-                        children: [
-                          TableRow(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "${state.totalPeserta}",
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
+                              ],
+                            ),
+                          ]
+                        : [
+                            ...List.generate(state.hasil.length, (index) {
+                              Map<String, dynamic> hasil = state.hasil[index];
+                              return Column(
+                                children: [
+                                  Table(
+                                    columnWidths: const {
+                                      0: FlexColumnWidth(1),
+                                      1: FlexColumnWidth(0.5),
+                                      2: FlexColumnWidth(2),
+                                      3: FlexColumnWidth(2),
+                                      4: FlexColumnWidth(2),
+                                    },
+                                    border: TableBorder.all(),
+                                    defaultVerticalAlignment:
+                                        TableCellVerticalAlignment.bottom,
+                                    children: const [
+                                      TableRow(
+                                        decoration: BoxDecoration(
+                                          color: Colors.pink,
+                                        ),
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text(
+                                              "Pesanan",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text(
+                                              "Qty",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text(
+                                              "Harga Satuan",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text(
+                                              "Total Harga",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  state.rupiahFormat(state.totalHarga),
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                                  Table(
+                                    columnWidths: const {
+                                      0: FlexColumnWidth(1),
+                                      1: FlexColumnWidth(0.5),
+                                      2: FlexColumnWidth(2),
+                                      3: FlexColumnWidth(2),
+                                      4: FlexColumnWidth(2),
+                                    },
+                                    border: TableBorder.all(),
+                                    children: [
+                                      ...hasil["pesanan"].map(
+                                        (e) => TableRow(
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.all(
+                                                8.0,
+                                              ),
+                                              child: Text(
+                                                "${e["deskripsi"]}",
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(
+                                                8.0,
+                                              ),
+                                              child: Text(
+                                                "${e["jumlahPesanan"]}",
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(
+                                                8.0,
+                                              ),
+                                              child: Text(
+                                                state.rupiahFormat(e["harga"]),
+                                                textAlign: TextAlign.right,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.all(
+                                                8.0,
+                                              ),
+                                              child: Text(
+                                                state.rupiahFormat(
+                                                  e["totalHarga"],
+                                                ),
+                                                textAlign: TextAlign.right,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  state.rupiahFormat(
-                                      state.totalHargaBiayaLayanan),
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                                  Table(
+                                    border: TableBorder.symmetric(
+                                      outside: BorderSide(),
+                                    ),
+                                    children: [
+                                      TableRow(
+                                        decoration: BoxDecoration(
+                                          color: Colors.pink,
+                                        ),
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Text(
+                                              "TOTAL ${hasil["nama"] ?? ""}",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: SizedBox(),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Text(
+                                              state.rupiahFormat(
+                                                hasil["totalHarga"],
+                                              ),
+                                              textAlign: TextAlign.right,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 10),
+                                ],
+                              );
+                            }),
+
+                            Table(
+                              border: TableBorder.all(),
+                              children: const [
+                                TableRow(
+                                  decoration: BoxDecoration(color: Colors.pink),
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "TOTAL",
+                                        textAlign: TextAlign.left,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              ],
+                            ),
+                            Table(
+                              // columnWidths: const {
+                              //   0: FlexColumnWidth(1.5),
+                              //   1: FlexColumnWidth(2),
+                              //   2: FlexColumnWidth(2),
+                              // },
+                              border: TableBorder.symmetric(
+                                outside: BorderSide(),
+                                inside: BorderSide(),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  state.rupiahFormat(state.totalHargaDiskon),
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              children: [
+                                TableRow(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Total Harga",
+                                        textAlign: TextAlign.left,
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                    // Padding(
+                                    //   padding: const EdgeInsets.all(8.0),
+                                    //   child: SizedBox(),
+                                    // ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        state.rupiahFormat(state.totalHarga),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    ],
+                                TableRow(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Total Harga + Layanan",
+                                        textAlign: TextAlign.left,
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                    // Padding(
+                                    //   padding: const EdgeInsets.all(8.0),
+                                    //   child: SizedBox(),
+                                    // ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        state.rupiahFormat(
+                                          state.totalHargaBiayaLayanan,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text(
+                                        "Total Harga setelah Diskon",
+                                        textAlign: TextAlign.left,
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                    // Padding(
+                                    //   padding: const EdgeInsets.all(8.0),
+                                    //   child: SizedBox(),
+                                    // ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        state.rupiahFormat(
+                                          state.totalHargaDiskon,
+                                        ),
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
                   ),
                 ),
               ),
@@ -385,22 +716,71 @@ class CalculatorView extends StatelessWidget {
     );
   }
 
-  Widget textField(
-      TextEditingController pesertaText,
-      TextEditingController hargaText,
-      TextEditingController deskripsiText,
-      int index) {
+  Widget textFieldPeserta(CalculatorByPesertaModel model, int index) {
+    if (state.tipeDiskonBiayaLayanan == "Berdasarkan Pesanan") {
+      return textFieldPesanan(model.pesanan.first, index, index);
+    }
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: model.peserta,
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(12),
+                  UpperInputFormatter(),
+                ],
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "Nama"),
+                cursorColor: Colors.pink,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 1,
+              child: SizedBox(
+                height: 35,
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.add),
+                  onPressed: () => state.addPesanan(index),
+                  label: Text("Pesanan"),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            IconButton(
+              onPressed: () {
+                state.removePeserta(index);
+              },
+              icon: const Icon(Icons.delete),
+            ),
+          ],
+        ),
+        ...List.generate(
+          model.pesanan.length,
+          (i) => textFieldPesanan(model.pesanan[i], i, index),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget textFieldPesanan(
+    CalculatorByPesananModel pesanan,
+    int index,
+    int pesertaIndex,
+  ) {
     return Row(
       children: [
         Expanded(
           flex: 2,
           child: TextField(
-            controller: pesertaText,
+            controller: pesanan.jumlah,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: "Jumlah",
-            ),
+            decoration: const InputDecoration(labelText: "Jumlah"),
             cursorColor: Colors.pink,
           ),
         ),
@@ -408,14 +788,12 @@ class CalculatorView extends StatelessWidget {
         Expanded(
           flex: 3,
           child: TextField(
-            controller: deskripsiText,
+            controller: pesanan.deskripsi,
             inputFormatters: [
               LengthLimitingTextInputFormatter(12),
-              UpperInputFormatter()
+              UpperInputFormatter(),
             ],
-            decoration: const InputDecoration(
-              labelText: "Deskripsi",
-            ),
+            decoration: const InputDecoration(labelText: "Deskripsi"),
             cursorColor: Colors.pink,
           ),
         ),
@@ -423,24 +801,22 @@ class CalculatorView extends StatelessWidget {
         Expanded(
           flex: 5,
           child: TextField(
-            controller: hargaText,
+            controller: pesanan.harga,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
-              CurrencyInputFormatter()
+              CurrencyInputFormatter(),
             ],
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: "Harga",
-            ),
+            decoration: const InputDecoration(labelText: "Harga"),
             cursorColor: Colors.pink,
           ),
         ),
         IconButton(
           onPressed: () {
-            state.remove(index);
+            state.removePesanan(index, pesertaIndex);
           },
           icon: const Icon(Icons.delete),
-        )
+        ),
       ],
     );
   }

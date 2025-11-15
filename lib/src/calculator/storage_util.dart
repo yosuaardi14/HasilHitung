@@ -4,7 +4,7 @@ class StorageUtil {
   static String container = "HasilHitung";
   static String password = "HasilHitung";
 
-  static init() async {
+  static Future<void> init() async {
     await GetSecureStorage.init(
       container: StorageUtil.container,
       password: StorageUtil.password,
