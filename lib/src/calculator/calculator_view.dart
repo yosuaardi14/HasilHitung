@@ -738,23 +738,38 @@ class CalculatorView extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
-              flex: 1,
-              child: SizedBox(
-                height: 35,
-                child: ElevatedButton.icon(
-                  icon: Icon(Icons.add),
-                  onPressed: () => state.addPesanan(index),
-                  label: Text("Pesanan"),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
+            // Expanded(
+            //   flex: 1,
+            //   child: SizedBox(
+            //     height: 35,
+            //     child: ElevatedButton.icon(
+            //       icon: Icon(Icons.add),
+            //       onPressed: () => state.addPesanan(index),
+            //       label: Text("Pesanan"),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(width: 10),
             IconButton(
               onPressed: () {
                 state.removePeserta(index);
               },
               icon: const Icon(Icons.delete),
+            ),
+          ],
+        ),
+        const SizedBox(width: 10),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 35,
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.add),
+                  onPressed: () => state.addPesanan(index),
+                  label: Text("Tambahkan Pesanan"),
+                ),
+              ),
             ),
           ],
         ),

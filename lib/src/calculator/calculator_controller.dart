@@ -74,14 +74,17 @@ class CalculatorController extends State<CaluculatorPage> {
 
   void removePesanan(int index, int pesertaIndex) {
     if (tipeDiskonBiayaLayanan == "Berdasarkan Pesanan") {
+      pesertaCalculator[index].dispose();
       pesertaCalculator.removeAt(index);
     } else {
+      pesertaCalculator[pesertaIndex].pesanan[index].dispose();
       pesertaCalculator[pesertaIndex].pesanan.removeAt(index);
     }
     setState(() {});
   }
 
   void removePeserta(int index) {
+    pesertaCalculator[index].dispose();
     pesertaCalculator.removeAt(index);
     setState(() {});
   }
@@ -295,6 +298,9 @@ class CalculatorController extends State<CaluculatorPage> {
   }
 
   void reset() {
+    for (var peserta in pesertaCalculator) {
+      peserta.dispose();
+    }
     pesertaCalculator.clear();
     diskonController.text = "0";
     biayaController.text = "0";
