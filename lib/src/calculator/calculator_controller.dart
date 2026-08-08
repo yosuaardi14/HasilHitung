@@ -104,7 +104,7 @@ class CalculatorController extends State<CaluculatorPage> {
     });
   }
 
-  void calculate() {
+  void calculate() async {
     hasil.clear();
     totalHarga = 0.0;
     totalHargaBiayaLayanan = 0.0;
@@ -213,7 +213,7 @@ class CalculatorController extends State<CaluculatorPage> {
       if (!rekeningTersimpan.contains(rekening)) {
         rekeningTersimpan.add(rekening);
       }
-      StorageUtil.saveData("rekening", rekeningTersimpan);
+      await StorageUtil.saveData("rekening", rekeningTersimpan);
     }
     setState(() {});
   }
@@ -281,11 +281,11 @@ class CalculatorController extends State<CaluculatorPage> {
     return a;
   }
 
-  void deleteRekening(String value) {
+  void deleteRekening(String value) async {
     setState(() {
       rekeningTersimpan.remove(value);
     });
-    StorageUtil.saveData("rekening", rekeningTersimpan);
+    await StorageUtil.saveData("rekening", rekeningTersimpan);
     focusNode.unfocus();
   }
 
