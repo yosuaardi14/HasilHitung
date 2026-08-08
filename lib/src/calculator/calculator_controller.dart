@@ -74,14 +74,17 @@ class CalculatorController extends State<CaluculatorPage> {
 
   void removePesanan(int index, int pesertaIndex) {
     if (tipeDiskonBiayaLayanan == "Berdasarkan Pesanan") {
+      pesertaCalculator[index].dispose();
       pesertaCalculator.removeAt(index);
     } else {
+      pesertaCalculator[pesertaIndex].pesanan[index].dispose();
       pesertaCalculator[pesertaIndex].pesanan.removeAt(index);
     }
     setState(() {});
   }
 
   void removePeserta(int index) {
+    pesertaCalculator[index].dispose();
     pesertaCalculator.removeAt(index);
     setState(() {});
   }
@@ -101,7 +104,7 @@ class CalculatorController extends State<CaluculatorPage> {
     });
   }
 
-  void calculate() {
+  void calculate() async {
     hasil.clear();
     totalHarga = 0.0;
     totalHargaBiayaLayanan = 0.0;
@@ -210,7 +213,7 @@ class CalculatorController extends State<CaluculatorPage> {
       if (!rekeningTersimpan.contains(rekening)) {
         rekeningTersimpan.add(rekening);
       }
-      StorageUtil.saveData("rekening", rekeningTersimpan);
+      await StorageUtil.saveData("rekening", rekeningTersimpan);
     }
     setState(() {});
   }
@@ -278,11 +281,11 @@ class CalculatorController extends State<CaluculatorPage> {
     return a;
   }
 
-  void deleteRekening(String value) {
+  void deleteRekening(String value) async {
     setState(() {
       rekeningTersimpan.remove(value);
     });
-    StorageUtil.saveData("rekening", rekeningTersimpan);
+    await StorageUtil.saveData("rekening", rekeningTersimpan);
     focusNode.unfocus();
   }
 
@@ -295,6 +298,9 @@ class CalculatorController extends State<CaluculatorPage> {
   }
 
   void reset() {
+    for (var peserta in pesertaCalculator) {
+      peserta.dispose();
+    }
     pesertaCalculator.clear();
     diskonController.text = "0";
     biayaController.text = "0";

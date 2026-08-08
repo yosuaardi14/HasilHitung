@@ -11,7 +11,7 @@ class StorageUtil {
     );
   }
 
-  static void saveData(String key, dynamic value) async {
+  static Future<void> saveData(String key, dynamic value) async {
     final box = GetSecureStorage(container: container, password: password);
     await box.write(key, value);
   }
@@ -25,12 +25,12 @@ class StorageUtil {
     return obj;
   }
 
-  static void deleteData(String key) async {
+  static Future<void> deleteData(String key) async {
     final box = GetSecureStorage(container: container, password: password);
     await box.remove(key);
   }
 
-  static void deleteAll() async {
+  static Future<void> deleteAll() async {
     final box = GetSecureStorage(container: container, password: password);
     await box.erase();
   }
